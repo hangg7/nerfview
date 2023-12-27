@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools==65.6.3"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "nerfview"
+version = "0.0.0"
+authors = []
+requires-python = ">=3.10"
+dependencies = ["viser", "jaxtyping"]
+
+[project.optional-dependencies]
+dev = ["black", "isort", "ipdb"]
+examples = ["virtualenv"]
+
+[tool.setuptools.packages.find]
+include = ["nerfview"]
+
+[tool.isort]
+profile = "black"
