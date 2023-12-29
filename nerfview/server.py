@@ -1,6 +1,6 @@
 import threading
 import time
-from typing import Callable, Literal, Optional
+from typing import Any, Callable, Literal, Optional
 
 import numpy as np
 import viser
@@ -16,6 +16,7 @@ class ViewerServer(viser.ViserServer):
         self,
         *args,
         render_fn: Callable[[CameraState, tuple[int, int]], UInt8[np.ndarray, "H W 3"]],
+        camera_state_extras_fn: Callable[[], dict[str, Any]] = lambda: {},
         stats: ViewerStats | None = None,
         lock: Optional[threading.Lock] = None,
         **kwargs,
@@ -24,7 +25,12 @@ class ViewerServer(viser.ViserServer):
         # Hack to disable verbose logging.
         self._server._verbose = False
 
+        # This function is called every time we need to render a new image.
         self.render_fn = render_fn
+        # This function is called every time we query the camera state. Useful
+        # when we are trying to control what to render interacting with GUI or
+        # model state etc.
+        self.camera_state_extras_fn = camera_state_extras_fn
         self.stats = stats or ViewerStats()
         self.lock = lock
 
@@ -121,7 +127,12 @@ class ViewerServer(viser.ViserServer):
             ],
             0,
         )
-        return CameraState(fov=camera.fov, aspect=camera.aspect, c2w=c2w)
+        return CameraState(
+            fov=camera.fov,
+            aspect=camera.aspect,
+            c2w=c2w,
+            extras=self.camera_state_extras_fn(),
+        )
 
     def update(self, step: int, num_train_rays_per_step: int):
         # Skip updating the viewer for the first few steps to allow

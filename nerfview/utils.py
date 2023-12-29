@@ -1,7 +1,7 @@
 import dataclasses
 import sys
 from threading import Lock
-from typing import Callable
+from typing import Any, Callable
 
 import numpy as np
 from jaxtyping import Float32
@@ -12,6 +12,7 @@ class CameraState(object):
     fov: float
     aspect: float
     c2w: Float32[np.ndarray, "4 4"]
+    extras: dict[str, Any]
 
 
 @dataclasses.dataclass
