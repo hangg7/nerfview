@@ -22,7 +22,12 @@ git popd
 # Install dependencies (will take a while).
 pip install numpy
 pip install torch==2.0.1 --index-url https://download.pytorch.org/whl/cu118
-pip install -e nerfacc
+pip install -e nerfacc --config-settings editable_mode=compat
 pip install -r nerfacc/examples/requirements.txt
 # Install nerfview.
-pip install -e ../../
+pip install -e ../../ --config-settings editable_mode=compat
+
+# Apply patch.
+pushd nerfacc
+git am ../nerfview.patch
+popd

@@ -1,34 +1,28 @@
-From cc533987473526515aee0e29f4042d8648811884 Mon Sep 17 00:00:00 2001
+From ee4bf3805bdb4f81e948c20a08af86d83b50887c Mon Sep 17 00:00:00 2001
 From: Hang Gao <hangg.sv7@gmail.com>
 Date: Tue, 26 Dec 2023 23:46:54 -0800
 Subject: [PATCH] Add nerfview viewer to the occ example
 
 ---
- examples/train_ngp_nerf_occ.py | 270 +++++++++++++++++++++------------
- 1 file changed, 172 insertions(+), 98 deletions(-)
+ examples/train_ngp_nerf_occ.py | 264 +++++++++++++++++++++------------
+ 1 file changed, 166 insertions(+), 98 deletions(-)
 
 diff --git a/examples/train_ngp_nerf_occ.py b/examples/train_ngp_nerf_occ.py
-index 401cf49..c882cd5 100644
+index 401cf49..3c2f3b1 100644
 --- a/examples/train_ngp_nerf_occ.py
 +++ b/examples/train_ngp_nerf_occ.py
-@@ -13,8 +13,16 @@ import torch
+@@ -13,8 +13,10 @@ import torch
  import torch.nn.functional as F
  import tqdm
  from lpips import LPIPS
-+from nerfview import (
-+    CameraState,
-+    ViewerServer,
-+    ViewerStats,
-+    view_lock,
-+    with_view_lock,
-+)
++from nerfview import CameraState, ViewerServer, view_lock
  from radiance_fields.ngp import NGPRadianceField
  
 +from examples.datasets.utils import Rays
  from examples.utils import (
      MIPNERF360_UNBOUNDED_SCENES,
      NERF_SYNTHETIC_SCENES,
-@@ -81,9 +89,7 @@ else:
+@@ -81,9 +83,7 @@ else:
      max_steps = 20000
      init_batch_size = 1024
      target_sample_batch_size = 1 << 18
@@ -39,7 +33,7 @@ index 401cf49..c882cd5 100644
      # scene parameters
      aabb = torch.tensor([-1.5, -1.5, -1.5, 1.5, 1.5, 1.5], device=device)
      near_plane = 0.0
-@@ -147,32 +153,49 @@ lpips_net = LPIPS(net="vgg").to(device)
+@@ -147,32 +147,49 @@ lpips_net = LPIPS(net="vgg").to(device)
  lpips_norm_fn = lambda x: x[None, ...].permute(0, 3, 1, 2) * 2 - 1
  lpips_fn = lambda x, y: lpips_net(lpips_norm_fn(x), lpips_norm_fn(y)).mean()
  
@@ -48,19 +42,19 @@ index 401cf49..c882cd5 100644
 -for step in range(max_steps + 1):
 -    radiance_field.train()
 -    estimator.train()
--
+ 
 -    i = torch.randint(0, len(train_dataset), (1,)).item()
 -    data = train_dataset[i]
- 
--    render_bkgd = data["color_bkgd"]
--    rays = data["rays"]
--    pixels = data["pixels"]
 +@torch.inference_mode()
 +def render_fn(camera_state: CameraState, img_wh: tuple[int, int]):
 +    fov = camera_state.fov
 +    c2w = torch.from_numpy(camera_state.c2w).to(dtype=torch.float32, device=device)
 +    W, H = img_wh
  
+-    render_bkgd = data["color_bkgd"]
+-    rays = data["rays"]
+-    pixels = data["pixels"]
+-
 -    def occ_eval_fn(x):
 -        density = radiance_field.query_density(x)
 -        return density * render_step_size
@@ -96,10 +90,10 @@ index 401cf49..c882cd5 100644
 +            (0, 1),
 +            value=1.0,
 +        ),
-+    )
+     )
 +    viewdirs = F.normalize(
 +        torch.einsum("ij,hwj->hwi", c2w[:3, :3], camera_dirs), p=2, dim=-1
-     )
++    )
 +    rays = Rays(origins=origins, viewdirs=viewdirs)
  
 -    # render
@@ -110,7 +104,7 @@ index 401cf49..c882cd5 100644
          radiance_field,
          estimator,
          rays,
-@@ -183,80 +206,131 @@ for step in range(max_steps + 1):
+@@ -183,80 +200,131 @@ for step in range(max_steps + 1):
          cone_angle=cone_angle,
          alpha_thre=alpha_thre,
      )
