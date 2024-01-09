@@ -8,7 +8,7 @@ import viser.transforms as vt
 from jaxtyping import UInt8
 
 from .renderer import Renderer, RenderTask
-from .utils import CameraState, ViewerStats
+from .utils import CameraState, ViewerStats, view_lock
 
 
 class ViewerServer(viser.ViserServer):
@@ -18,7 +18,7 @@ class ViewerServer(viser.ViserServer):
         render_fn: Callable[[CameraState, tuple[int, int]], UInt8[np.ndarray, "H W 3"]],
         camera_state_extras_fn: Callable[[], dict[str, Any]] = lambda: {},
         stats: ViewerStats | None = None,
-        lock: Optional[threading.Lock] = None,
+        lock: Optional[threading.Lock] = view_lock,
         **kwargs,
     ):
         super().__init__(*args, **kwargs)
@@ -150,19 +150,16 @@ class ViewerServer(viser.ViserServer):
         if self.training_state == "training" and self._train_util_slider.value != 1:
             assert (
                 self.stats.num_train_rays_per_sec is not None
-            ), "User must set `num_train_rays_per_sec` to use `update`."
-            assert (
-                self.stats.num_view_rays_per_sec is not None
-            ), "Expect `num_view_rays_per_sec` to be set by the first `update` call."
+            ), "User must keep track of `num_train_rays_per_sec` to use `update`."
             train_s = self.stats.num_train_rays_per_sec
-            vis_s = self.stats.num_view_rays_per_sec
+            view_s = self.stats.num_view_rays_per_sec
             train_util = self._train_util_slider.value
-            vis_n = self._max_img_res_slider.value**2
+            view_n = self._max_img_res_slider.value**2
             train_n = num_train_rays_per_step
             train_time = train_n / train_s
-            vis_time = vis_n / vis_s
+            view_time = view_n / view_s
             update_every = (
-                train_util * vis_time / (train_time - train_util * train_time)
+                train_util * view_time / (train_time - train_util * train_time)
             )
             if step > self._last_update_step + update_every:
                 self._last_update_step = step

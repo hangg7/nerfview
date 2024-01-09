@@ -4,7 +4,6 @@ import threading
 import time
 from typing import TYPE_CHECKING, Literal, Optional, get_args
 
-import numpy as np
 import viser
 
 from .utils import CameraState, InterruptRenderException, set_trace_context

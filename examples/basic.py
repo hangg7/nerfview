@@ -45,13 +45,15 @@ def render_fn(camera_state: CameraState, img_wh: tuple[int, int]):
 
 
 @with_view_lock
-def train_step(budget: float):
+def train_step(step: int, budget: float = 0.1):
+    print(f"Training step {step}...")
     time.sleep(budget)
+    print("Done.")
 
 
 if __name__ == "__main__":
-    # Use case 1: Just serving the images -- useful when inspecting a
-    # pretrained checkpoint.
+    #  # Use case 1: Just serving the images -- useful when inspecting a
+    #  # pretrained checkpoint.
     #  viewer_stats = ViewerStats()
     #  server = ViewerServer(port=30108, render_fn=render_fn)
     #  while True:
@@ -62,17 +64,18 @@ if __name__ == "__main__":
     server = ViewerServer(port=30108, render_fn=render_fn)
     stats = server.stats
     max_steps = 10000
+    num_train_rays_per_step = 512 * 512
     for step in range(max_steps):
         while server.training_state == "paused":
             time.sleep(0.01)
 
-        secs_per_step = 0.1
-        num_train_rays_per_step = 512 * 512
-        num_train_rays_per_sec = num_train_rays_per_step / secs_per_step
-
-        train_step(secs_per_step)
+        train_step(step)
+        num_train_steps_per_sec = 10.0
+        num_train_rays_per_sec = num_train_rays_per_step * num_train_steps_per_sec
+        tic = time.time()
 
         # Update viewer stats.
         stats.num_train_rays_per_sec = num_train_rays_per_sec
         # Update viewer.
         server.update(step, num_train_rays_per_step)
+    server.complete()
