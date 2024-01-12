@@ -17,7 +17,7 @@ conda activate "$(pwd)/.env"
 git clone https://github.com/nerfstudio-project/nerfacc --recursive
 pushd nerfacc
 git checkout e6647a0
-git popd
+popd
 
 # Install dependencies (will take a while).
 pip install numpy
