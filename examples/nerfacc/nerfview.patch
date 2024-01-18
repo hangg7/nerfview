@@ -1,14 +1,14 @@
-From ee4bf3805bdb4f81e948c20a08af86d83b50887c Mon Sep 17 00:00:00 2001
+From e74a3329cd0ae30e23c7144f3a6bc5f57b844737 Mon Sep 17 00:00:00 2001
 From: Hang Gao <hangg.sv7@gmail.com>
-Date: Tue, 26 Dec 2023 23:46:54 -0800
+Date: Thu, 18 Jan 2024 15:38:21 -0800
 Subject: [PATCH] Add nerfview viewer to the occ example
 
 ---
- examples/train_ngp_nerf_occ.py | 264 +++++++++++++++++++++------------
- 1 file changed, 166 insertions(+), 98 deletions(-)
+ examples/train_ngp_nerf_occ.py | 283 +++++++++++++++++++++------------
+ 1 file changed, 184 insertions(+), 99 deletions(-)
 
 diff --git a/examples/train_ngp_nerf_occ.py b/examples/train_ngp_nerf_occ.py
-index 401cf49..3c2f3b1 100644
+index 401cf49..b53e927 100644
 --- a/examples/train_ngp_nerf_occ.py
 +++ b/examples/train_ngp_nerf_occ.py
 @@ -13,8 +13,10 @@ import torch
@@ -22,7 +22,20 @@ index 401cf49..3c2f3b1 100644
  from examples.utils import (
      MIPNERF360_UNBOUNDED_SCENES,
      NERF_SYNTHETIC_SCENES,
-@@ -81,9 +83,7 @@ else:
+@@ -46,6 +48,12 @@ parser.add_argument(
+     choices=NERF_SYNTHETIC_SCENES + MIPNERF360_UNBOUNDED_SCENES,
+     help="which scene to use",
+ )
++parser.add_argument(
++    "--port",
++    type=int,
++    default=None,
++    help="whether or not use nerfview viewer, if yes what port to use",
++)
+ args = parser.parse_args()
+ 
+ device = "cuda:0"
+@@ -81,9 +89,7 @@ else:
      max_steps = 20000
      init_batch_size = 1024
      target_sample_batch_size = 1 << 18
@@ -33,7 +46,7 @@ index 401cf49..3c2f3b1 100644
      # scene parameters
      aabb = torch.tensor([-1.5, -1.5, -1.5, 1.5, 1.5, 1.5], device=device)
      near_plane = 0.0
-@@ -147,32 +147,49 @@ lpips_net = LPIPS(net="vgg").to(device)
+@@ -147,116 +153,195 @@ lpips_net = LPIPS(net="vgg").to(device)
  lpips_norm_fn = lambda x: x[None, ...].permute(0, 3, 1, 2) * 2 - 1
  lpips_fn = lambda x, y: lpips_net(lpips_norm_fn(x), lpips_norm_fn(y)).mean()
  
@@ -42,19 +55,19 @@ index 401cf49..3c2f3b1 100644
 -for step in range(max_steps + 1):
 -    radiance_field.train()
 -    estimator.train()
- 
+-
 -    i = torch.randint(0, len(train_dataset), (1,)).item()
 -    data = train_dataset[i]
+ 
+-    render_bkgd = data["color_bkgd"]
+-    rays = data["rays"]
+-    pixels = data["pixels"]
 +@torch.inference_mode()
 +def render_fn(camera_state: CameraState, img_wh: tuple[int, int]):
 +    fov = camera_state.fov
 +    c2w = torch.from_numpy(camera_state.c2w).to(dtype=torch.float32, device=device)
 +    W, H = img_wh
  
--    render_bkgd = data["color_bkgd"]
--    rays = data["rays"]
--    pixels = data["pixels"]
--
 -    def occ_eval_fn(x):
 -        density = radiance_field.query_density(x)
 -        return density * render_step_size
@@ -90,10 +103,10 @@ index 401cf49..3c2f3b1 100644
 +            (0, 1),
 +            value=1.0,
 +        ),
-     )
++    )
 +    viewdirs = F.normalize(
 +        torch.einsum("ij,hwj->hwi", c2w[:3, :3], camera_dirs), p=2, dim=-1
-+    )
+     )
 +    rays = Rays(origins=origins, viewdirs=viewdirs)
  
 -    # render
@@ -104,7 +117,11 @@ index 401cf49..3c2f3b1 100644
          radiance_field,
          estimator,
          rays,
-@@ -183,80 +200,131 @@ for step in range(max_steps + 1):
+         # rendering options
+         near_plane=near_plane,
+         render_step_size=render_step_size,
+-        render_bkgd=render_bkgd,
++        render_bkgd=torch.ones((3,), device=device),
          cone_angle=cone_angle,
          alpha_thre=alpha_thre,
      )
@@ -121,11 +138,19 @@ index 401cf49..3c2f3b1 100644
 +    return img
 +
 +
-+server = ViewerServer(port=30108, render_fn=render_fn)
++if args.port is not None:
++    server = ViewerServer(port=args.port, render_fn=render_fn)
++    server.set_up_direction("-y" if args.scene in MIPNERF360_UNBOUNDED_SCENES else "+z")
++else:
++    server = None
 +
 +# training
 +tic = time.time()
 +for step in range(max_steps + 1):
++    if server is not None:
++        while server.training_state == "paused":
++            time.sleep(0.01)
++
 +    step_tic = time.time()
 +    with view_lock:
 +        radiance_field.train()
@@ -183,7 +208,53 @@ index 401cf49..3c2f3b1 100644
          )
 +        if n_rendering_samples == 0:
 +            continue
-+
+ 
+-    if step > 0 and step % max_steps == 0:
+-        # evaluation
+-        radiance_field.eval()
+-        estimator.eval()
+-
+-        psnrs = []
+-        lpips = []
+-        with torch.no_grad():
+-            for i in tqdm.tqdm(range(len(test_dataset))):
+-                data = test_dataset[i]
+-                render_bkgd = data["color_bkgd"]
+-                rays = data["rays"]
+-                pixels = data["pixels"]
+-
+-                # rendering
+-                rgb, acc, depth, _ = render_image_with_occgrid_test(
+-                    1024,
+-                    # scene
+-                    radiance_field,
+-                    estimator,
+-                    rays,
+-                    # rendering options
+-                    near_plane=near_plane,
+-                    render_step_size=render_step_size,
+-                    render_bkgd=render_bkgd,
+-                    cone_angle=cone_angle,
+-                    alpha_thre=alpha_thre,
+-                )
+-                mse = F.mse_loss(rgb, pixels)
+-                psnr = -10.0 * torch.log(mse) / np.log(10.0)
+-                psnrs.append(psnr.item())
+-                lpips.append(lpips_fn(rgb, pixels).item())
+-                # if i == 0:
+-                #     imageio.imwrite(
+-                #         "rgb_test.png",
+-                #         (rgb.cpu().numpy() * 255).astype(np.uint8),
+-                #     )
+-                #     imageio.imwrite(
+-                #         "rgb_error.png",
+-                #         (
+-                #             (rgb - pixels).norm(dim=-1).cpu().numpy() * 255
+-                #         ).astype(np.uint8),
+-                #     )
+-        psnr_avg = sum(psnrs) / len(psnrs)
+-        lpips_avg = sum(lpips) / len(lpips)
+-        print(f"evaluation: psnr_avg={psnr_avg}, lpips_avg={lpips_avg}")
 +        if target_sample_batch_size > 0:
 +            # dynamic batch size for rays to keep sample batch size constant.
 +            num_rays = len(pixels)
@@ -258,58 +329,15 @@ index 401cf49..3c2f3b1 100644
 +            psnr_avg = sum(psnrs) / len(psnrs)
 +            lpips_avg = sum(lpips) / len(lpips)
 +            print(f"evaluation: psnr_avg={psnr_avg}, lpips_avg={lpips_avg}")
- 
--    if step > 0 and step % max_steps == 0:
--        # evaluation
--        radiance_field.eval()
--        estimator.eval()
--
--        psnrs = []
--        lpips = []
--        with torch.no_grad():
--            for i in tqdm.tqdm(range(len(test_dataset))):
--                data = test_dataset[i]
--                render_bkgd = data["color_bkgd"]
--                rays = data["rays"]
--                pixels = data["pixels"]
--
--                # rendering
--                rgb, acc, depth, _ = render_image_with_occgrid_test(
--                    1024,
--                    # scene
--                    radiance_field,
--                    estimator,
--                    rays,
--                    # rendering options
--                    near_plane=near_plane,
--                    render_step_size=render_step_size,
--                    render_bkgd=render_bkgd,
--                    cone_angle=cone_angle,
--                    alpha_thre=alpha_thre,
--                )
--                mse = F.mse_loss(rgb, pixels)
--                psnr = -10.0 * torch.log(mse) / np.log(10.0)
--                psnrs.append(psnr.item())
--                lpips.append(lpips_fn(rgb, pixels).item())
--                # if i == 0:
--                #     imageio.imwrite(
--                #         "rgb_test.png",
--                #         (rgb.cpu().numpy() * 255).astype(np.uint8),
--                #     )
--                #     imageio.imwrite(
--                #         "rgb_error.png",
--                #         (
--                #             (rgb - pixels).norm(dim=-1).cpu().numpy() * 255
--                #         ).astype(np.uint8),
--                #     )
--        psnr_avg = sum(psnrs) / len(psnrs)
--        lpips_avg = sum(lpips) / len(lpips)
--        print(f"evaluation: psnr_avg={psnr_avg}, lpips_avg={lpips_avg}")
-+    viewer_stats = server.stats
-+    num_train_rays_per_step = len(pixels)
-+    num_secs_per_step = time.time() - step_tic
-+    viewer_stats.num_train_rays_per_sec = num_train_rays_per_step / num_secs_per_step
-+    server.update(step, num_train_rays_per_step)
++
++    if server is not None:
++        viewer_stats = server.stats
++        num_train_rays_per_step = len(pixels)
++        num_secs_per_step = time.time() - step_tic
++        viewer_stats.num_train_rays_per_sec = (
++            num_train_rays_per_step / num_secs_per_step
++        )
++        server.update(step, num_train_rays_per_step)
 -- 
 2.34.1
 

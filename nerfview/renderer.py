@@ -93,7 +93,7 @@ class Renderer(threading.Thread):
             self._task = task
         elif task.action == "update" and (
             self._state == "low_move"
-            or self._task.action in ["move", "static", "rerender"]
+            or self._task.action in ["move", "rerender"]
         ):
             return
         else:
