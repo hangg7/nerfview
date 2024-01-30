@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "nerfview"
 version = "0.0.0"
 authors = []
-requires-python = ">=3.10"
+requires-python = ">=3.8"
 dependencies = ["viser", "jaxtyping"]
 
 [project.optional-dependencies]

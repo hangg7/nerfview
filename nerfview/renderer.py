@@ -18,7 +18,7 @@ RenderAction = Literal["rerender", "move", "static", "update"]
 @dataclasses.dataclass
 class RenderTask(object):
     action: RenderAction
-    camera_state: CameraState | None = None
+    camera_state: Optional[CameraState] = None
 
 
 class Renderer(threading.Thread):
@@ -38,7 +38,7 @@ class Renderer(threading.Thread):
 
         self._render_event = threading.Event()
         self._state: RenderState = "low_static"
-        self._task: RenderTask | None = None
+        self._task: Optional[RenderTask] = None
 
         self._target_fps = 30
         self._may_interrupt_render = False
@@ -92,8 +92,7 @@ class Renderer(threading.Thread):
         if self._task is None:
             self._task = task
         elif task.action == "update" and (
-            self._state == "low_move"
-            or self._task.action in ["move", "rerender"]
+            self._state == "low_move" or self._task.action in ["move", "rerender"]
         ):
             return
         else:

@@ -17,7 +17,7 @@ class ViewerServer(viser.ViserServer):
         *args,
         render_fn: Callable[[CameraState, tuple[int, int]], UInt8[np.ndarray, "H W 3"]],
         camera_state_extras_fn: Callable[[], dict[str, Any]] = lambda: {},
-        stats: ViewerStats | None = None,
+        stats: Optional[ViewerStats] = None,
         lock: Optional[threading.Lock] = view_lock,
         **kwargs,
     ):

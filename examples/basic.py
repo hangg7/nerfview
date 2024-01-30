@@ -52,9 +52,17 @@ def train_step(step: int, budget: float = 0.1):
 
 
 if __name__ == "__main__":
+    # NOTE(Hang Gao @ 01/26): Debug why this not working.
     #  # Use case 1: Just serving the images -- useful when inspecting a
     #  # pretrained checkpoint.
-    #  viewer_stats = ViewerStats()
+    #  server = ViewerServer(port=30108, render_fn=render_fn)
+    #  while True:
+    #      with server.lock:
+    #          time.sleep(1.0)
+    #      time.sleep(0.5)
+
+    #  # Use case 1: Just serving the images -- useful when inspecting a
+    #  # pretrained checkpoint.
     #  server = ViewerServer(port=30108, render_fn=render_fn)
     #  while True:
     #      time.sleep(1.0)

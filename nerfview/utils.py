@@ -1,7 +1,7 @@
 import dataclasses
 import sys
 from threading import Lock
-from typing import Any, Callable
+from typing import Any, Callable, Optional
 
 import numpy as np
 from jaxtyping import Float32
@@ -17,7 +17,7 @@ class CameraState(object):
 
 @dataclasses.dataclass
 class ViewerStats(object):
-    num_train_rays_per_sec: float | None = None
+    num_train_rays_per_sec: Optional[float] = None
     num_view_rays_per_sec: float = 100000.0
 
 
