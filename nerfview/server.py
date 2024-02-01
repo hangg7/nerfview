@@ -39,7 +39,9 @@ class ViewerServer(viser.ViserServer):
         self.on_client_connect(self._connect_client)
 
         # Public states.
-        self.training_state: Literal["training", "paused", "completed"] = "training"
+        self.training_state: Literal[
+            "preparing", "training", "paused", "completed"
+        ] = "training"
 
         # Private states.
         self._step: int = 0

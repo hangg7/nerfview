@@ -35,6 +35,7 @@ class Renderer(threading.Thread):
         self.lock = lock if lock is not None else contextlib.nullcontext()
 
         self.running = True
+        self.is_prepared_fn = lambda: self.server.training_state != "preparing"
 
         self._render_event = threading.Event()
         self._state: RenderState = "low_static"
@@ -104,6 +105,8 @@ class Renderer(threading.Thread):
 
     def run(self):
         while self.running:
+            if not self.is_prepared_fn():
+                self._render_event.wait()
             if not self._render_event.wait(0.2):
                 self.submit(
                     RenderTask("static", self.server.get_camera_state(self.client))
