@@ -105,8 +105,8 @@ class Renderer(threading.Thread):
 
     def run(self):
         while self.running:
-            if not self.is_prepared_fn():
-                self._render_event.wait()
+            while not self.is_prepared_fn():
+                time.sleep(0.1)
             if not self._render_event.wait(0.2):
                 self.submit(
                     RenderTask("static", self.server.get_camera_state(self.client))
