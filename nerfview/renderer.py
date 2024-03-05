@@ -2,6 +2,7 @@ import contextlib
 import dataclasses
 import threading
 import time
+import traceback
 from typing import TYPE_CHECKING, Literal, Optional, get_args
 
 import viser
@@ -123,14 +124,18 @@ class Renderer(threading.Thread):
                 with self.lock, set_trace_context(self._may_interrupt_trace):
                     tic = time.time()
                     W, H = img_wh = self._get_img_wh(task.camera_state.aspect)
-                    img = self.server.render_fn(task.camera_state, img_wh)
+                    img, depth = self.server.render_fn(task.camera_state, img_wh)
                     self.server.stats.num_view_rays_per_sec = (W * H) / (
                         time.time() - tic
                     )
             except InterruptRenderException:
                 continue
+            except Exception:
+                traceback.print_exc()
+                continue
             self.client.set_background_image(
                 img,
                 format="jpeg",
                 jpeg_quality=70 if task.action in ["static", "update"] else 40,
+                depth=depth,
             )

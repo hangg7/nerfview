@@ -1,11 +1,11 @@
 import threading
 import time
-from typing import Any, Callable, Literal, Optional
+from typing import Any, Callable, Literal, Optional, Tuple
 
 import numpy as np
 import viser
 import viser.transforms as vt
-from jaxtyping import UInt8
+from jaxtyping import Float32, UInt8
 
 from .renderer import Renderer, RenderTask
 from .utils import CameraState, ViewerStats, view_lock
@@ -15,7 +15,10 @@ class ViewerServer(viser.ViserServer):
     def __init__(
         self,
         *args,
-        render_fn: Callable[[CameraState, tuple[int, int]], UInt8[np.ndarray, "H W 3"]],
+        render_fn: Callable[
+            [CameraState, tuple[int, int]],
+            Tuple[UInt8[np.ndarray, "H W 3"], Optional[Float32[np.ndarray, "H W"]]],
+        ],
         camera_state_extras_fn: Callable[[], dict[str, Any]] = lambda: {},
         stats: Optional[ViewerStats] = None,
         lock: Optional[threading.Lock] = view_lock,
@@ -39,9 +42,9 @@ class ViewerServer(viser.ViserServer):
         self.on_client_connect(self._connect_client)
 
         # Public states.
-        self.training_state: Literal[
-            "preparing", "training", "paused", "completed"
-        ] = "training"
+        self.training_state: Literal["preparing", "training", "paused", "completed"] = (
+            "training"
+        )
 
         # Private states.
         self._step: int = 0
