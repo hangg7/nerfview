@@ -1,6 +1,6 @@
 import threading
 import time
-from typing import Any, Callable, Literal, Optional, Tuple
+from typing import Any, Callable, Literal, Optional, Tuple, Union
 
 import numpy as np
 import viser
@@ -17,7 +17,10 @@ class ViewerServer(viser.ViserServer):
         *args,
         render_fn: Callable[
             [CameraState, tuple[int, int]],
-            Tuple[UInt8[np.ndarray, "H W 3"], Optional[Float32[np.ndarray, "H W"]]],
+            Union[
+                UInt8[np.ndarray, "H W 3"],
+                Tuple[UInt8[np.ndarray, "H W 3"], Optional[Float32[np.ndarray, "H W"]]],
+            ],
         ],
         camera_state_extras_fn: Callable[[], dict[str, Any]] = lambda: {},
         stats: Optional[ViewerStats] = None,

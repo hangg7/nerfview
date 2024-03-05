@@ -124,7 +124,11 @@ class Renderer(threading.Thread):
                 with self.lock, set_trace_context(self._may_interrupt_trace):
                     tic = time.time()
                     W, H = img_wh = self._get_img_wh(task.camera_state.aspect)
-                    img, depth = self.server.render_fn(task.camera_state, img_wh)
+                    rendered = self.server.render_fn(task.camera_state, img_wh)
+                    if isinstance(rendered, tuple):
+                        img, depth = rendered
+                    else:
+                        img, depth = rendered, None
                     self.server.stats.num_view_rays_per_sec = (W * H) / (
                         time.time() - tic
                     )
