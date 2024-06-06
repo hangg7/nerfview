@@ -7,11 +7,11 @@ name = "nerfview"
 version = "0.0.0"
 authors = []
 requires-python = ">=3.8"
-dependencies = ["viser", "jaxtyping"]
+dependencies = ["viser==0.2.0", "jaxtyping"]
 
 [project.optional-dependencies]
+examples = ["tyro"]
 dev = ["black", "isort", "ipdb"]
-examples = ["virtualenv"]
 
 [tool.setuptools.packages.find]
 include = ["nerfview"]

@@ -1,16 +1,15 @@
-import contextlib
 import dataclasses
+import os
+import sys
 import threading
 import time
 import traceback
-from typing import TYPE_CHECKING, Literal, Optional, get_args
+from typing import TYPE_CHECKING, Literal, Optional, Tuple, get_args
 
 import viser
 
-from .utils import CameraState, InterruptRenderException, set_trace_context
-
 if TYPE_CHECKING:
-    from .server import ViewerServer
+    from .server import CameraState, ViewerServer
 
 RenderState = Literal["low_move", "low_static", "high"]
 RenderAction = Literal["rerender", "move", "static", "update"]
@@ -19,7 +18,23 @@ RenderAction = Literal["rerender", "move", "static", "update"]
 @dataclasses.dataclass
 class RenderTask(object):
     action: RenderAction
-    camera_state: Optional[CameraState] = None
+    camera_state: Optional["CameraState"] = None
+
+
+class InterruptRenderException(Exception):
+    pass
+
+
+class set_trace_context(object):
+    def __init__(self, func):
+        self.func = func
+
+    def __enter__(self):
+        sys.settrace(self.func)
+        return self
+
+    def __exit__(self, *_, **__):
+        sys.settrace(None)
 
 
 class Renderer(threading.Thread):
@@ -27,16 +42,16 @@ class Renderer(threading.Thread):
         self,
         server: "ViewerServer",
         client: viser.ClientHandle,
-        lock: Optional[threading.Lock] = None,
+        lock: threading.Lock,
     ):
         super().__init__(daemon=True)
 
         self.server = server
         self.client = client
-        self.lock = lock if lock is not None else contextlib.nullcontext()
+        self.lock = lock
 
         self.running = True
-        self.is_prepared_fn = lambda: self.server.training_state != "preparing"
+        self.is_prepared_fn = lambda: self.server.state.status != "preparing"
 
         self._render_event = threading.Event()
         self._state: RenderState = "low_static"
@@ -66,7 +81,7 @@ class Renderer(threading.Thread):
                 raise InterruptRenderException
         return self._may_interrupt_trace
 
-    def _get_img_wh(self, aspect: float) -> tuple[int, int]:
+    def _get_img_wh(self, aspect: float) -> Tuple[int, int]:
         max_img_res = self.server._max_img_res_slider.value
         if self._state == "high":
             #  if True:
@@ -76,7 +91,7 @@ class Renderer(threading.Thread):
                 W = max_img_res
                 H = int(W / aspect)
         elif self._state in ["low_move", "low_static"]:
-            num_view_rays_per_sec = self.server.stats.num_view_rays_per_sec
+            num_view_rays_per_sec = self.server.state.num_view_rays_per_sec
             target_fps = self._target_fps
             num_viewer_rays = num_view_rays_per_sec / target_fps
             H = (num_viewer_rays / aspect) ** 0.5
@@ -129,15 +144,15 @@ class Renderer(threading.Thread):
                         img, depth = rendered
                     else:
                         img, depth = rendered, None
-                    self.server.stats.num_view_rays_per_sec = (W * H) / (
+                    self.server.state.num_view_rays_per_sec = (W * H) / (
                         time.time() - tic
                     )
             except InterruptRenderException:
                 continue
             except Exception:
                 traceback.print_exc()
-                continue
-            self.client.set_background_image(
+                os._exit(1)
+            self.client.scene.set_background_image(
                 img,
                 format="jpeg",
                 jpeg_quality=70 if task.action in ["static", "update"] else 40,

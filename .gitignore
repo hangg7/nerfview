@@ -1,6 +1,7 @@
 build/
 
 .vscode/
+.venv/
 .envrc
 .nvimrc
 
