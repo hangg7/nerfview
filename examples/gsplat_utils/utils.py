@@ -2,9 +2,9 @@ import random
 
 import numpy as np
 import torch
+import torch.nn.functional as F
 from sklearn.neighbors import NearestNeighbors
 from torch import Tensor
-import torch.nn.functional as F
 
 
 class CameraOptModule(torch.nn.Module):

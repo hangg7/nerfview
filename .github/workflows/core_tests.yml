@@ -1,0 +1,28 @@
+name: Core Tests.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python 3.8
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.8"
+      - name: Install dependencies
+        run: |
+          pip install isort==5.9.3 black==23.7.0
+      - name: Run isort
+        run: isort examples/ nerfview/ --profile black --check
+      - name: Run Black
+        run: black examples/ nerfview/ --check
