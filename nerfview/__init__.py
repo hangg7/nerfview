@@ -1,1 +1,1 @@
-from .server import VIEWER_LOCK, CameraState, ViewerServer, with_viewer_lock
+from .viewer import VIEWER_LOCK, CameraState, Viewer, with_viewer_lock

@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Literal, Optional, Tuple, get_args
 import viser
 
 if TYPE_CHECKING:
-    from .server import CameraState, ViewerServer
+    from .viewer import CameraState, Viewer
 
 RenderState = Literal["low_move", "low_static", "high"]
 RenderAction = Literal["rerender", "move", "static", "update"]
@@ -38,20 +38,22 @@ class set_trace_context(object):
 
 
 class Renderer(threading.Thread):
+    """This class is responsible for rendering images in the background."""
+
     def __init__(
         self,
-        server: "ViewerServer",
+        viewer: "Viewer",
         client: viser.ClientHandle,
         lock: threading.Lock,
     ):
         super().__init__(daemon=True)
 
-        self.server = server
+        self.viewer = viewer
         self.client = client
         self.lock = lock
 
         self.running = True
-        self.is_prepared_fn = lambda: self.server.state.status != "preparing"
+        self.is_prepared_fn = lambda: self.viewer.state.status != "preparing"
 
         self._render_event = threading.Event()
         self._state: RenderState = "low_static"
@@ -82,7 +84,7 @@ class Renderer(threading.Thread):
         return self._may_interrupt_trace
 
     def _get_img_wh(self, aspect: float) -> Tuple[int, int]:
-        max_img_res = self.server._max_img_res_slider.value
+        max_img_res = self.viewer._max_img_res_slider.value
         if self._state == "high":
             #  if True:
             H = max_img_res
@@ -91,7 +93,7 @@ class Renderer(threading.Thread):
                 W = max_img_res
                 H = int(W / aspect)
         elif self._state in ["low_move", "low_static"]:
-            num_view_rays_per_sec = self.server.state.num_view_rays_per_sec
+            num_view_rays_per_sec = self.viewer.state.num_view_rays_per_sec
             target_fps = self._target_fps
             num_viewer_rays = num_view_rays_per_sec / target_fps
             H = (num_viewer_rays / aspect) ** 0.5
@@ -125,7 +127,7 @@ class Renderer(threading.Thread):
                 time.sleep(0.1)
             if not self._render_event.wait(0.2):
                 self.submit(
-                    RenderTask("static", self.server.get_camera_state(self.client))
+                    RenderTask("static", self.viewer.get_camera_state(self.client))
                 )
             self._render_event.clear()
             task = self._task
@@ -139,12 +141,12 @@ class Renderer(threading.Thread):
                 with self.lock, set_trace_context(self._may_interrupt_trace):
                     tic = time.time()
                     W, H = img_wh = self._get_img_wh(task.camera_state.aspect)
-                    rendered = self.server.render_fn(task.camera_state, img_wh)
+                    rendered = self.viewer.render_fn(task.camera_state, img_wh)
                     if isinstance(rendered, tuple):
                         img, depth = rendered
                     else:
                         img, depth = rendered, None
-                    self.server.state.num_view_rays_per_sec = (W * H) / (
+                    self.viewer.state.num_view_rays_per_sec = (W * H) / (
                         time.time() - tic
                     )
             except InterruptRenderException:

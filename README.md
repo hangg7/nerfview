@@ -1,10 +1,12 @@
 # nerfview
 
-nerfview is a minimal web viewer for interactive NeRF rendering. It is largely
+nerfview is a minimal\* web viewer for interactive NeRF rendering. It is largely
 inspired by [nerfstudio's
 viewer](https://github.com/nerfstudio-project/nerfstudio), but with a
-standalone packaging and simple API to quickly integrate into your own
+standalone packaging and simple API to quickly integrate into your own research
 projects.
+
+\*The whole package contains two files and is less than 400 lines of code.
 
 ## Installation
 
@@ -28,39 +30,34 @@ pip install -e ".[examples]"
 ## Usage
 
 nerfview is built on [viser](https://viser.studio/latest/) and provides a
-simple API for interactive viewing. It supports two modes: rendering an
-existing NeRF model and rendering a progressive training process. The canonical
-usage is as follows:
+simple API for interactive viewing.
+
+The canonical usage is as follows:
 
 ```python
-import numpy as np
-from nerfview import CameraState, ViewerServer
+from typing import Tuple
+
+import viser
+import nerfview
+
 
 def render_fn(
-    camera_state: CameraState, img_wh: Tuple[int, int]
-) -> UInt8[np.ndarray, "H W 3"]:
-    # Parse camera state for camera-to-world matrix (c2w) and intrinsic matrix
-    # (K) as float64 numpy arrays.
-    fov = camera_state.fov
+    camera_state: nerfview.CameraState, img_wh: Tuple[int, int]
+) -> np.ndarray:
+    # Parse camera state for camera-to-world matrix (c2w) and intrinsic (K) as
+    # float64 numpy arrays.
     c2w = camera_state.c2w
-    W, H = img_wh
-    focal_length = H / 2.0 / np.tan(fov / 2.0)
-    K = np.array(
-        [
-            [focal_length, 0.0, W / 2.0],
-            [0.0, focal_length, H / 2.0],
-            [0.0, 0.0, 1.0],
-        ]
-    )
-
+    K = camera_state.get_K(img_wh)
+    # Do your things and get an image as a uint8 numpy array.
     img = your_rendering_logic(...)
     return img
 
-server = ViewerServer(render_fn=render_fn)
+# Initialize a viser server and our viewer.
+server = viser.ViserServer(verbose=False)
+viewer = nerfview.Viewer(server=server, render_fn=render_fn, mode='rendering')
 ```
 
-It will start a viser server and render the image based on the camera state
-which you can interact with.
+It will start a viser server and render the image from a camera that you can interact with.
 
 ## Examples
 

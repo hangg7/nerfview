@@ -8,7 +8,7 @@ import viser
 import viser.transforms as vt
 from jaxtyping import Float32, UInt8
 
-from .renderer import Renderer, RenderTask
+from ._renderer import Renderer, RenderTask
 
 
 @dataclasses.dataclass
@@ -17,14 +17,26 @@ class CameraState(object):
     aspect: float
     c2w: Float32[np.ndarray, "4 4"]
 
+    def get_K(self, img_wh: Tuple[int, int]) -> Float32[np.ndarray, "3 3"]:
+        W, H = img_wh
+        focal_length = H / 2.0 / np.tan(self.fov / 2.0)
+        K = np.array(
+            [
+                [focal_length, 0.0, W / 2.0],
+                [0.0, focal_length, H / 2.0],
+                [0.0, 0.0, 1.0],
+            ]
+        )
+        return K
+
 
 @dataclasses.dataclass
 class ViewerState(object):
     num_train_rays_per_sec: Optional[float] = None
     num_view_rays_per_sec: float = 100000.0
-    status: Literal["rendering", "preparing", "training", "paused", "completed"] = (
-        "training"
-    )
+    status: Literal[
+        "rendering", "preparing", "training", "paused", "completed"
+    ] = "training"
 
 
 VIEWER_LOCK = Lock()
@@ -38,10 +50,26 @@ def with_viewer_lock(fn: Callable) -> Callable:
     return wrapper
 
 
-class ViewerServer(viser.ViserServer):
+class Viewer(object):
+    """This is the main class for working with nerfview viewer.
+
+    On instantiation, it (a) binds to a viser server and (b) creates a set of
+    GUIs depending on its mode. After user connecting to the server, viewer
+    renders and servers images in the background based on the camera movement.
+
+    Args:
+        server (viser.ViserServer): The viser server object to bind to.
+        render_fn (Callable): A function that takes a camera state and image
+            resolution as input and returns an image as a uint8 numpy array.
+            Optionally, it can return a tuple of two images, where the second image
+            is a float32 numpy depth map.
+        mode (Literal["training", "rendering"]): The mode of the viewer.
+            Support rendering and training. Defaults to "rendering".
+    """
+
     def __init__(
         self,
-        *args,
+        server: viser.ViserServer,
         render_fn: Callable[
             [CameraState, Tuple[int, int]],
             Union[
@@ -49,36 +77,30 @@ class ViewerServer(viser.ViserServer):
                 Tuple[UInt8[np.ndarray, "H W 3"], Optional[Float32[np.ndarray, "H W"]]],
             ],
         ],
-        mode: Literal["training", "rendering"] = "training",
-        **kwargs,
+        mode: Literal["rendering", "training"] = "rendering",
     ):
-        super().__init__(*args, **kwargs)
-        # Hack to disable verbose logging.
-        self._websock_server._verbose = False
-
-        # This function is called every time we need to render a new image.
+        # Public states.
+        self.server = server
         self.render_fn = render_fn
         self.mode = mode
-
-        self.renderers: dict[int, Renderer] = {}
-        self.on_client_disconnect(self._disconnect_client)
-        self.on_client_connect(self._connect_client)
-
-        # Public states.
         self.lock = VIEWER_LOCK
         self.state = ViewerState()
         if self.mode == "rendering":
             self.state.status = "rendering"
 
         # Private states.
+        self._renderers: dict[int, Renderer] = {}
         self._step: int = 0
         self._last_update_step: int = 0
         self._last_move_time: float = 0.0
 
+        server.on_client_disconnect(self._disconnect_client)
+        server.on_client_connect(self._connect_client)
+
         self._define_guis()
 
     def _define_guis(self):
-        with self.gui.add_folder(
+        with self.server.gui.add_folder(
             "Stats", visible=self.mode == "training"
         ) as self._stats_folder:
             self._stats_text_fn = (
@@ -87,26 +109,26 @@ class ViewerServer(viser.ViserServer):
                 Last Update: {self._last_update_step}
                 </sub>"""
             )
-            self._stats_text = self.gui.add_markdown(self._stats_text_fn())
+            self._stats_text = self.server.gui.add_markdown(self._stats_text_fn())
 
-        with self.gui.add_folder(
+        with self.server.gui.add_folder(
             "Training", visible=self.mode == "training"
         ) as self._training_folder:
-            self._pause_train_button = self.gui.add_button("Pause")
+            self._pause_train_button = self.server.gui.add_button("Pause")
             self._pause_train_button.on_click(self._toggle_train_buttons)
             self._pause_train_button.on_click(self._toggle_train_s)
-            self._resume_train_button = self.gui.add_button("Resume")
+            self._resume_train_button = self.server.gui.add_button("Resume")
             self._resume_train_button.visible = False
             self._resume_train_button.on_click(self._toggle_train_buttons)
             self._resume_train_button.on_click(self._toggle_train_s)
 
-            self._train_util_slider = self.gui.add_slider(
+            self._train_util_slider = self.server.gui.add_slider(
                 "Train Util", min=0.0, max=1.0, step=0.05, initial_value=0.9
             )
             self._train_util_slider.on_update(self.rerender)
 
-        with self.gui.add_folder("Rendering") as self._rendering_folder:
-            self._max_img_res_slider = self.gui.add_slider(
+        with self.server.gui.add_folder("Rendering") as self._rendering_folder:
+            self._max_img_res_slider = self.server.gui.add_slider(
                 "Max Img Res", min=64, max=2048, step=1, initial_value=2048
             )
             self._max_img_res_slider.on_update(self.rerender)
@@ -121,28 +143,30 @@ class ViewerServer(viser.ViserServer):
         self.state.status = "paused" if self.state.status == "training" else "training"
 
     def rerender(self, _):
-        clients = self.get_clients()
+        clients = self.server.get_clients()
         for client_id in clients:
             camera_state = self.get_camera_state(clients[client_id])
             assert camera_state is not None
-            self.renderers[client_id].submit(RenderTask("rerender", camera_state))
+            self._renderers[client_id].submit(RenderTask("rerender", camera_state))
 
     def _disconnect_client(self, client: viser.ClientHandle):
         client_id = client.client_id
-        self.renderers[client_id].running = False
-        self.renderers.pop(client_id)
+        self._renderers[client_id].running = False
+        self._renderers.pop(client_id)
 
     def _connect_client(self, client: viser.ClientHandle):
         client_id = client.client_id
-        self.renderers[client_id] = Renderer(server=self, client=client, lock=self.lock)
-        self.renderers[client_id].start()
+        self._renderers[client_id] = Renderer(
+            viewer=self, client=client, lock=self.lock
+        )
+        self._renderers[client_id].start()
 
         @client.camera.on_update
         def _(_: viser.CameraHandle):
             self._last_move_time = time.time()
-            with self.atomic():
+            with self.server.atomic():
                 camera_state = self.get_camera_state(client)
-                self.renderers[client_id].submit(RenderTask("move", camera_state))
+                self._renderers[client_id].submit(RenderTask("move", camera_state))
 
     def get_camera_state(self, client: viser.ClientHandle) -> CameraState:
         camera = client.camera
@@ -162,14 +186,16 @@ class ViewerServer(viser.ViserServer):
         )
 
     def update(self, step: int, num_train_rays_per_step: int):
+        if self.mode == "rendering":
+            raise ValueError("`update` method is only available in training mode.")
         # Skip updating the viewer for the first few steps to allow
         # `num_train_rays_per_sec` and `num_view_rays_per_sec` to stabilize.
         if step < 5:
             return
         self._step = step
-        with self.atomic(), self._stats_folder:
+        with self.server.atomic(), self._stats_folder:
             self._stats_text.content = self._stats_text_fn()
-        if len(self.renderers) == 0:
+        if len(self._renderers) == 0:
             return
         # Stop training while user moves camera to make viewing smoother.
         while time.time() - self._last_move_time < 0.1:
@@ -190,12 +216,14 @@ class ViewerServer(viser.ViserServer):
             )
             if step > self._last_update_step + update_every:
                 self._last_update_step = step
-                clients = self.get_clients()
+                clients = self.server.get_clients()
                 for client_id in clients:
                     camera_state = self.get_camera_state(clients[client_id])
                     assert camera_state is not None
-                    self.renderers[client_id].submit(RenderTask("update", camera_state))
-                with self.atomic(), self._stats_folder:
+                    self._renderers[client_id].submit(
+                        RenderTask("update", camera_state)
+                    )
+                with self.server.atomic(), self._stats_folder:
                     self._stats_text.content = self._stats_text_fn()
 
     def complete(self):
@@ -203,7 +231,7 @@ class ViewerServer(viser.ViserServer):
         self._pause_train_button.disabled = True
         self._resume_train_button.disabled = True
         self._train_util_slider.disabled = True
-        with self.atomic(), self._stats_folder:
+        with self.server.atomic(), self._stats_folder:
             self._stats_text.content = f"""<sub>
                 Step: {self._step}\\
                 Training Completed!

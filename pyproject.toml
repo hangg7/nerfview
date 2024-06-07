@@ -7,7 +7,10 @@ name = "nerfview"
 version = "0.0.0"
 authors = []
 requires-python = ">=3.8"
-dependencies = ["viser==0.2.0", "jaxtyping"]
+dependencies = [
+  "viser @ git+https://github.com/nerfstudio-project/viser@main",
+  "jaxtyping",
+]
 
 [project.optional-dependencies]
 examples = [

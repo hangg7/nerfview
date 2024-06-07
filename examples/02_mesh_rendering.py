@@ -1,6 +1,6 @@
 import os.path as osp
 import time
-from typing import Optional, Tuple, cast
+from typing import Tuple, cast
 
 import numpy as np
 import nvdiffrast.torch as dr
@@ -9,9 +9,10 @@ import torch
 import torch.nn.functional as F
 import trimesh
 import tyro
+import viser
 from jaxtyping import UInt8
 
-from nerfview import CameraState, ViewerServer
+import nerfview
 
 CUDA_CTX = dr.RasterizeCudaContext()
 GL_CTX = dr.RasterizeGLContext()
@@ -23,13 +24,16 @@ def get_proj_mat(
     znear: float = 0.001,
     zfar: float = 1000.0,
 ) -> torch.Tensor:
-    """
+    """Get the OpenGL-style projection matrix.
+
     Args:
-        K: (3, 3).
-        img_wh: (2,).
+        K (torch.Tensor): (3, 3) camera intrinsic matrix.
+        img_wh (Tuple[int, int]): Image width and height.
+        znear (float): Near plane.
+        zfar (float): Far plane.
 
     Returns:
-        proj_mat: (4, 4).
+        proj_mat (torch.Tensor): (4, 4) projection matrix.
     """
     W, H = img_wh
     # Assume a camera model without distortion.
@@ -53,41 +57,6 @@ def get_proj_mat(
     )
 
 
-def get_proj_mat_wp(
-    M: torch.Tensor,
-    img_wh: Tuple[int, int],
-    znear: float = -1000.0,
-    zfar: float = 1000.0,
-) -> torch.Tensor:
-    """
-    Args:
-        M: (4, 4).
-        img_wh: (2,).
-
-    Returns:
-        proj_mat: (4, 4).
-    """
-    W, H = img_wh
-    t = H
-    b = 0
-    r = W
-    l = 0
-    n = znear
-    f = zfar
-    return (
-        torch.tensor(
-            [
-                [2 / (r - l), 0.0, 0.0, -(r + l) / (r - l)],
-                [0.0, 2 / (t - b), 0.0, -(t + b) / (t - b)],
-                [0.0, 0.0, 2 / (f - n), (f + n) / (f - n)],
-                [0.0, 0.0, 0.0, 1.0],
-            ],
-            device=M.device,
-        )
-        @ M
-    )
-
-
 @torch.inference_mode()
 def render_mesh(
     verts: torch.Tensor,
@@ -97,13 +66,18 @@ def render_mesh(
     img_wh: Tuple[int, int],
     is_opencv_camera: bool = True,
 ) -> dict:
-    """
+    """Render the mesh with normal and mask.
+
     Args:
-        verts: (V, 3).
-        faces: (F, 3).
-        w2c: (4, 4).
-        proj_mat: (4, 4).
-        img_wh: (2,).
+        verts (torch.Tensor): (V, 3) mesh vertices.
+        faces (torch.Tensor): (F, 3) mesh faces.
+        w2c (torch.Tensor): (4, 4) world-to-camera matrix.
+        proj_mat (torch.Tensor): (4, 4) projection matrix.
+        img_wh (Tuple[int, int]): Image width and height.
+        is_opencv_camera (bool): Whether the camera is in OpenCV coordinate.
+
+    Returns:
+        dict: A dictionray containing rendered normal and mask.
     """
     W, H = img_wh
     if max(W, H) > 2048:
@@ -165,15 +139,16 @@ def render_mesh(
 
 
 def main(port: int = 8080):
-    """Rendering a dummy scene.
+    """Rendering a mesh scene.
 
-    This example allows injecting an artificial rendering latency to simulate
-    real-world scenarios. The higher the latency, the lower the resolution of
-    the rendered output during camera movement.
+    This example showcase how to interactively render a mesh by directly
+    serving rendering results from nvdiffrast.
+
+    Note that the server is only serving the images rather than passing the
+    mesh object to ThreeJS for rendering.
 
     Args:
         port (int): The port number for the viewer server.
-        rendering_latency (float): The artificial rendering latency.
     """
     device = "cuda"
 
@@ -197,24 +172,16 @@ def main(port: int = 8080):
     )
 
     def render_fn(
-        camera_state: CameraState, img_wh: Tuple[int, int]
+        camera_state: nerfview.CameraState, img_wh: Tuple[int, int]
     ) -> UInt8[np.ndarray, "H W 3"]:
         # nvdiffrast requires the image size to be multiples of 8.
         img_wh = (img_wh[0] // 8 * 8, img_wh[1] // 8 * 8)
 
-        fov = camera_state.fov
+        # Get camera parameters.
         c2w = camera_state.c2w
-        W, H = img_wh
+        K = camera_state.get_K(img_wh)
 
-        focal_length = H / 2.0 / np.tan(fov / 2.0)
-        K = np.array(
-            [
-                [focal_length, 0.0, W / 2.0],
-                [0.0, focal_length, H / 2.0],
-                [0.0, 0.0, 1.0],
-            ]
-        )
-
+        # Compute the normal map.
         w2c = torch.linalg.inv(torch.as_tensor(c2w, dtype=torch.float32, device=device))
         K = torch.as_tensor(K, dtype=torch.float32, device=device)
         normal = (
@@ -231,8 +198,13 @@ def main(port: int = 8080):
 
         return normal
 
-    # Initialize the viser server with our rendering function.
-    _ = ViewerServer(port=port, render_fn=render_fn, mode="rendering")
+    # Initialize the viser server and our viewer.
+    server = viser.ViserServer(port=port, verbose=False)
+    _ = nerfview.Viewer(
+        server=server,
+        render_fn=render_fn,
+        mode="rendering",
+    )
 
     while True:
         time.sleep(1.0)
