@@ -27,8 +27,10 @@ pip install -e ".[examples]"
 
 ## Usage
 
-nerfview is built on [viser](https://viser.studio/latest/) and provides a simple API for interactive viewing. It supports two modes: rendering an existing NeRF model and rendering a progressive training process.
-The canonical usage is as follows:
+nerfview is built on [viser](https://viser.studio/latest/) and provides a
+simple API for interactive viewing. It supports two modes: rendering an
+existing NeRF model and rendering a progressive training process. The canonical
+usage is as follows:
 
 ```python
 import numpy as np
@@ -57,12 +59,14 @@ def render_fn(
 server = ViewerServer(render_fn=render_fn)
 ```
 
-It will start a viser server and render the image based on the camera state which you can interact with.
+It will start a viser server and render the image based on the camera state
+which you can interact with.
 
 ## Examples
 
-We provide a few examples ranging from toy rendering to real-world training
-applications. Click on the dropdown to see more details.
+We provide a few examples ranging from toy rendering to real-world NeRF training
+applications. Click on the dropdown to see more details. You can always ask for
+help message by the `-h` flag.
 
 <details>
 <summary>Rendering a dummy scene.</summary>
@@ -80,6 +84,7 @@ python examples/00_dummy_rendering.py
 <br>
 This example is the best starting point to understand the API for training time
 update.
+
 ```bash
 python examples/01_dummy_training.py
 ```
