@@ -1,7 +1,7 @@
 results/
 
 .vscode/
-.venv/
+.venv*/
 .envrc
 .nvimrc
 

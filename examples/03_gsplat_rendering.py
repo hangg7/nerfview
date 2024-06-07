@@ -64,6 +64,7 @@ if args.ckpt is None:
         Ks,  # [C, 3, 3]
         width,
         height,
+        backgrounds=torch.ones(C, 3, device=device),
         render_mode="RGB+D",
     )
     assert render_colors.shape == (C, height, width, 4)
@@ -175,6 +176,7 @@ def viewer_render_fn(camera_state: CameraState, img_wh: Tuple[int, int]):
         height,
         sh_degree=sh_degree,
         render_mode="RGB",
+        backgrounds=torch.ones(1, 3, device=device),
         # this is to speedup large-scale rendering by skipping far-away Gaussians.
         radius_clip=3,
     )

@@ -8,7 +8,7 @@ from jaxtyping import UInt8
 from nerfview import CameraState, ViewerServer
 
 
-def main(port: int, rendering_latency: float = 0.0):
+def main(port: int = 8080, rendering_latency: float = 0.0):
     """Rendering a dummy scene.
 
     This example allows injecting an artificial rendering latency to simulate

@@ -1,6 +1,6 @@
 import os.path as osp
 import time
-from typing import Tuple, cast
+from typing import Optional, Tuple, cast
 
 import numpy as np
 import nvdiffrast.torch as dr
@@ -164,7 +164,7 @@ def render_mesh(
     }
 
 
-def main(port: int):
+def main(port: int = 8080):
     """Rendering a dummy scene.
 
     This example allows injecting an artificial rendering latency to simulate

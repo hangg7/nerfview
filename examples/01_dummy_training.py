@@ -1,5 +1,5 @@
 import time
-from typing import Tuple
+from typing import Optional, Tuple
 
 import numpy as np
 import tyro
@@ -9,7 +9,7 @@ from tqdm import tqdm
 from nerfview import CameraState, ViewerServer
 
 
-def main(port: int, max_steps: int = 200, rendering_latency: float = 0.0):
+def main(port: int = 8080, max_steps: int = 50, rendering_latency: float = 0.0):
     """Rendering the training process of a dummy scene.
 
     This example allows injecting an artificial rendering latency to simulate
@@ -78,6 +78,10 @@ def main(port: int, max_steps: int = 200, rendering_latency: float = 0.0):
     # Optionally make world axes visible for better visualization in this
     # example. You don't need to do this in your own code.
     server.scene.world_axes.visible = True
+    # Optionally make the training utility lower such that we update the scene
+    # more frequently in this example. You dont need to do this in your own
+    # code.
+    server._train_util_slider.value = 0.2
 
     for step in tqdm(range(max_steps)):
         # Allow user to pause the training process.
