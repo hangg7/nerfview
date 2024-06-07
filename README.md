@@ -1,5 +1,14 @@
 # nerfview
 
+<p align="left">
+    <a href="https://github.com/hangg7/nerfview/actions/workflows/core_tests.yml">
+        <img alt="core-tests" src="https://github.com/hangg7/nerfview/actions/workflows/core_tests.yml/badge.svg?branch=main" />
+    </a>
+    <a href="https://pypi.org/project/nerfview/">
+        <img alt="codecov" src="https://img.shields.io/pypi/pyversions/nerfview" />
+    </a>
+</p>
+
 nerfview is a minimal\* web viewer for interactive NeRF rendering. It is largely
 inspired by [nerfstudio's
 viewer](https://github.com/nerfstudio-project/nerfstudio), but with a
