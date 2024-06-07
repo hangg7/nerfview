@@ -22,7 +22,7 @@ projects.
 For existing project, you can install it via pip:
 
 ```bash
-pip install git+https://github.com/hangg7/nerfview.git
+pip install nerfview
 ```
 
 To run our examples, you can clone this repository and then install it locally:
@@ -33,7 +33,8 @@ git clone https://github.com/hangg7/nerfview
 pip install torch
 # Then this repo and dependencies for running examples. Note that `gsplat`
 # requires compilation and this will take some time for the first time.
-pip install -e ".[examples]"
+pip install -e .
+pip install -r examples/requirements.txt
 ```
 
 ## Usage
