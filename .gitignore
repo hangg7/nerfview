@@ -35,6 +35,7 @@ results/
 # packing-only formats
 *.iso
 *.tar
+dist/
 
 # package management formats
 *.dmg
