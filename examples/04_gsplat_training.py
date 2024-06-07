@@ -933,7 +933,7 @@ class Runner:
             height=H,
             sh_degree=self.cfg.sh_degree,  # active all SH degrees
             radius_clip=3.0,  # skip GSs that have small image radius (in pixels)
-            backgrounds=torch.zeros(1, 3, device=self.device),
+            backgrounds=torch.ones(1, 3, device=self.device),
         )  # [1, H, W, 3]
         return render_colors[0].cpu().numpy()
 
