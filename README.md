@@ -71,6 +71,9 @@ help message by the `-h` flag.
 <details>
 <summary>Rendering a dummy scene.</summary>
 <br>
+    
+https://github.com/hangg7/nerfview/assets/10098306/53a41fac-bce7-4820-be75-f90483bc22a0
+
 This example is the best starting point to understand the basic API.
 
 ```bash
@@ -82,6 +85,9 @@ python examples/00_dummy_rendering.py
 <details>
 <summary>Rendering a dummy training process.</summary>
 <br>
+    
+https://github.com/hangg7/nerfview/assets/10098306/8b13ca4a-6aaa-46a7-a333-b889c2a4ac15
+
 This example is the best starting point to understand the API for training time
 update.
 
@@ -94,8 +100,11 @@ python examples/01_dummy_training.py
 <details>
 <summary>Rendering a mesh scene.</summary>
 <br>
-This example showcases how to interactively viewing a mesh by directly serving
-rendering results using <a href="https://nvlabs.github.io/nvdiffrast/">nvdiffrast</a>.
+    
+https://github.com/hangg7/nerfview/assets/10098306/84c9993f-82a3-48fb-9786-b5205bffcd6f
+
+This example showcases how to interactively render a mesh by directly serving
+rendering results from <a href="https://nvlabs.github.io/nvdiffrast/">nvdiffrast</a>.
 
 ```bash
 # Only need to run once the first time.
@@ -108,8 +117,11 @@ CUDA_VISIBLE_DEVICES=0 python examples/02_mesh_rendering.py
 <details>
 <summary>Rendering a pretrained 3DGS scene.</summary>
 <br>
+    
+https://github.com/hangg7/nerfview/assets/10098306/7b526105-8b6f-431c-9b49-10c821a3bd36
+
 This example showcases how to render a pretrained 3DGS model using gsplat. The
-scene is cropped such that it is smaller to download.
+scene is cropped such that it is smaller to download. It is essentially the [simple_viewer example](https://github.com/nerfstudio-project/gsplat/blob/v1.0/examples/simple_viewer.py), which we include here to be self-contained.
 
 ```bash
 # Only need to run once the first time.
@@ -123,8 +135,11 @@ CUDA_VISIBLE_DEVICES=0 python examples/03_gsplat_rendering.py \
 <details>
 <summary>Rendering a 3DGS training process.</summary>
 <br>
+    
+https://github.com/hangg7/nerfview/assets/10098306/640d4067-e410-49aa-86b8-325140dd73a8
+
 This example showcases how to render while training 3DGS on mip-NeRF's garden
-scene using gsplat.
+scene using gsplat. It is essentially the [simple_trainer example](https://github.com/nerfstudio-project/gsplat/blob/v1.0/examples/simple_trainer.py), which we include here to be self-contained.
 
 ```bash
 # Only need to run once the first time.
