@@ -7,17 +7,14 @@ name = "nerfview"
 version = "0.0.0"
 authors = []
 requires-python = ">=3.8"
-dependencies = [
-  "viser @ git+https://github.com/nerfstudio-project/viser@main",
-  "jaxtyping",
-]
+dependencies = ["viser==0.2.1", "jaxtyping==0.2.29"]
 
 [project.optional-dependencies]
 examples = [
-  "tyro",
+  "tyro==0.8.4",
   "nvdiffrast @ git+https://github.com/NVlabs/nvdiffrast.git@main",
   "roma",
-  "gsplat @ git+https://github.com/nerfstudio-project/gsplat.git@v1.0",
+  "gsplat==1.0.0",
   "imageio[ffmpeg]",
   "scikit-learn",
   "torchmetrics[image]",
