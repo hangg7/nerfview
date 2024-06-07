@@ -21,7 +21,7 @@ git clone https://github.com/hangg7/nerfview
 # Install torch first.
 pip install torch
 # Then this repo and dependencies for running examples. Note that `gsplat`
-requires compilation and this will take some time for the first time.
+# requires compilation and this will take some time for the first time.
 pip install -e ".[examples]"
 ```
 
@@ -37,7 +37,8 @@ from nerfview import CameraState, ViewerServer
 def render_fn(
     camera_state: CameraState, img_wh: Tuple[int, int]
 ) -> UInt8[np.ndarray, "H W 3"]:
-    # Parse camera state for camera-to-world matrix (c2w) and intrinsic matrix (K).
+    # Parse camera state for camera-to-world matrix (c2w) and intrinsic matrix
+    # (K) as float64 numpy arrays.
     fov = camera_state.fov
     c2w = camera_state.c2w
     W, H = img_wh
@@ -68,7 +69,7 @@ applications. Click on the dropdown to see more details.
 <br>
 This example is the best starting point to understand the basic API.
 
-```python
+```bash
 python examples/00_dummy_rendering.py
 ```
 
@@ -80,7 +81,7 @@ python examples/00_dummy_rendering.py
 This example is the best starting point to understand the API for training time
 update.
 
-```python
+```bash
 python examples/01_dummy_training.py
 ```
 
@@ -92,7 +93,7 @@ python examples/01_dummy_training.py
 This example showcases how to interactively viewing a mesh by directly serving
 rendering results using [nvdiffrast](https://nvlabs.github.io/nvdiffrast/).
 
-```python
+```bash
 # Only need to run once the first time.
 bash examples/assets/download_dragon_mesh.sh
 python examples/02_mesh_rendering.py
@@ -106,7 +107,7 @@ python examples/02_mesh_rendering.py
 This example showcases how to render a pretrained 3DGS model using gsplat. The
 scene is cropped such that it is smaller to download.
 
-```python
+```bash
 # Only need to run once the first time.
 bash examples/assets/download_gsplat_ckpt.sh
 CUDA_VISIBLE_DEVICES=0 python examples/03_gsplat_rendering.py \
@@ -121,7 +122,7 @@ CUDA_VISIBLE_DEVICES=0 python examples/03_gsplat_rendering.py \
 This example showcases how to render while training 3DGS on mip-NeRF's garden
 scene using gsplat.
 
-```python
+```bash
 # Only need to run once the first time.
 bash examples/assets/download_colmap_garden.sh
 CUDA_VISIBLE_DEVICES=0 python examples/04_gsplat_training.py \
