@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "nerfview"
-version = "0.0.0"
+version = "0.0.1"
 description = "Interactive NeRF rendering web viewer"
 readme = "README.md"
 license = { text = "MIT" }
