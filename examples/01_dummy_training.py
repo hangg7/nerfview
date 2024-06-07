@@ -89,7 +89,7 @@ def main(port: int, max_steps: int = 200, rendering_latency: float = 0.0):
             num_train_rays_per_step = training_step()
         num_train_steps_per_sec = 1.0 / (time.time() - tic)
         num_train_rays_per_sec = num_train_rays_per_step * num_train_steps_per_sec
-        # Update the viewer stats.
+        # Update the viewer state.
         server.state.num_train_rays_per_sec = num_train_rays_per_sec
         # Update the scene.
         server.update(step, num_train_rays_per_step)

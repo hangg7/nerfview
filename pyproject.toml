@@ -10,7 +10,13 @@ requires-python = ">=3.8"
 dependencies = ["viser==0.2.0", "jaxtyping"]
 
 [project.optional-dependencies]
-examples = ["tyro"]
+examples = [
+  "tyro",
+  "torch",
+  "nvdiffrast @ git+https://github.com/NVlabs/nvdiffrast.git@main",
+  "roma",
+  "gsplat @ git+https://github.com/nerfstudio-project/gsplat.git@v1.0",
+]
 dev = ["black", "isort", "ipdb"]
 
 [tool.setuptools.packages.find]
