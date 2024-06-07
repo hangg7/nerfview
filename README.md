@@ -80,7 +80,6 @@ python examples/00_dummy_rendering.py
 <br>
 This example is the best starting point to understand the API for training time
 update.
-
 ```bash
 python examples/01_dummy_training.py
 ```
@@ -91,12 +90,12 @@ python examples/01_dummy_training.py
 <summary>Rendering a mesh scene.</summary>
 <br>
 This example showcases how to interactively viewing a mesh by directly serving
-rendering results using [nvdiffrast](https://nvlabs.github.io/nvdiffrast/).
+rendering results using <a href="https://nvlabs.github.io/nvdiffrast/">nvdiffrast</a>.
 
 ```bash
 # Only need to run once the first time.
 bash examples/assets/download_dragon_mesh.sh
-python examples/02_mesh_rendering.py
+CUDA_VISIBLE_DEVICES=0 python examples/02_mesh_rendering.py
 ```
 
 </details>
