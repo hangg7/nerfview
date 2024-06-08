@@ -128,7 +128,10 @@ CUDA_VISIBLE_DEVICES=0 python examples/02_mesh_rendering.py
 https://github.com/hangg7/nerfview/assets/10098306/7b526105-8b6f-431c-9b49-10c821a3bd36
 
 This example showcases how to render a pretrained 3DGS model using gsplat. The
-scene is cropped such that it is smaller to download. It is essentially the [simple_viewer example](https://github.com/nerfstudio-project/gsplat/blob/v1.0/examples/simple_viewer.py), which we include here to be self-contained.
+scene is cropped such that it is smaller to download. It is essentially the
+[simple viewer
+example](https://github.com/nerfstudio-project/gsplat/blob/07d9188590ae1ee1e9ff7794a4217cc4591b44cf/examples/simple_viewer.py),
+which we include here to be self-contained.
 
 ```bash
 # Only need to run once the first time.
@@ -146,7 +149,9 @@ CUDA_VISIBLE_DEVICES=0 python examples/03_gsplat_rendering.py \
 https://github.com/hangg7/nerfview/assets/10098306/640d4067-e410-49aa-86b8-325140dd73a8
 
 This example showcases how to render while training 3DGS on mip-NeRF's garden
-scene using gsplat. It is essentially the [simple_trainer example](https://github.com/nerfstudio-project/gsplat/blob/v1.0/examples/simple_trainer.py), which we include here to be self-contained.
+scene using gsplat. It is essentially the [simple trainer
+example](https://github.com/nerfstudio-project/gsplat/blob/07d9188590ae1ee1e9ff7794a4217cc4591b44cf/examples/simple_trainer.py),
+which we include here to be self-contained.
 
 ```bash
 # Only need to run once the first time.
