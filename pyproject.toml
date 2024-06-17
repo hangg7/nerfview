@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "nerfview"
-version = "0.0.2"
+version = "0.0.3"
 description = "Interactive NeRF rendering web viewer"
 readme = "README.md"
 license = { text = "MIT" }
@@ -18,7 +18,7 @@ classifiers = [
   "License :: OSI Approved :: MIT License",
   "Operating System :: OS Independent",
 ]
-dependencies = ["viser==0.2.1", "jaxtyping==0.2.29"]
+dependencies = ["viser>=0.2.1", "jaxtyping>=0.2.15"]
 
 [project.optional-dependencies]
 dev = ["black", "isort", "ipdb"]

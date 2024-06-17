@@ -19,6 +19,8 @@ projects.
 
 ## Installation
 
+This package requires Python 3.8+.
+
 For existing project, you can install it via pip:
 
 ```bash
