@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools==65.6.3"]
+requires = ["setuptools>=68.0.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -18,7 +18,7 @@ classifiers = [
   "License :: OSI Approved :: MIT License",
   "Operating System :: OS Independent",
 ]
-dependencies = ["viser>=0.2.1", "jaxtyping>=0.2.15"]
+dependencies = ["viser>=0.2.1"]
 
 [project.optional-dependencies]
 dev = ["black", "isort", "ipdb"]
