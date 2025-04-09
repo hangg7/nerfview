@@ -160,3 +160,4 @@ class Renderer(threading.Thread):
                 jpeg_quality=70 if task.action in ["static", "update"] else 40,
                 depth=depth,
             )
+            self.client.flush()
